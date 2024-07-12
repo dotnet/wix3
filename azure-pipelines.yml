@@ -1,0 +1,50 @@
+name: Custom WiX v3 Pipeline
+trigger:
+  batch: true
+  branches:
+    include:
+    - develop
+
+pr: none
+
+resources:
+  repositories:
+  - repository: 1ESPipelineTemplates
+    type: git
+    name: 1ESPipelineTemplates/1ESPipelineTemplates
+    ref: refs/tags/release
+
+extends:
+  template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
+  parameters:
+    pool:
+      name: NetCore1ESPool-Svc-Internal
+      image: windows.vs2017.amd64      
+      os: windows
+
+    stages:
+    - stage: build
+      displayName: Build
+      jobs:
+      - job: build
+        displayName: Build
+        steps:
+        - task: MSBuild@1
+          displayName: Register WiX Toolset StrongName Verification Skipping
+          inputs:
+            solution: tools\OneTimeWixBuildInitialization.proj
+        # List out installed SDKs. This is useful for troubleshooting since WiX only checks a default set of
+        # SDKs. If anything changes on the build agents, this will help identify possible SDK versions to use
+        # and add to WiX targets.
+        - script: reg query "HKLM\SOFTWARE\MICROSOFT\WINDOWS KITS\Installed Roots" /s
+          displayName: List Windows SDKs
+        - task: MSBuild@1
+          inputs:
+            solution: 'wix.proj'
+            msbuildArguments: '/p:Configuration=Release'
+        templateContext:
+          outputs:
+          - output: pipelineArtifact
+            displayName: Publish Build Artifacts
+            artifact: build
+            path: $(System.DefaultWorkingDirectory)/build
