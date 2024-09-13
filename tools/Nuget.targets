@@ -10,12 +10,24 @@
   </PropertyGroup>
 
   <PropertyGroup>
+    <SignToolTaskPackageVersion>6.0.0-beta.24367.5</SignToolTaskPackageVersion>
+    <MicroBuildCorePackageVersion>0.2.0</MicroBuildCorePackageVersion>
+    <VSWherePackageVersion>3.1.7</VSWherePackageVersion>
+    <EWSoftwareSHFBPackageVersion>2024.2.18</EWSoftwareSHFBPackageVersion>
+    <EWSoftwareSHFBNetFrameworkPackageVersion>4.7.2</EWSoftwareSHFBNetFrameworkPackageVersion>
+  </PropertyGroup>
+
+  <PropertyGroup>
     <AzureStorageBuildTasksPath>$(NugetPackageFolder)FireGiant.BuildTasks.AzureStorage.1.0.0.0\tools\</AzureStorageBuildTasksPath>
     <ExtensionPackPath>$(NugetPackageFolder)MSBuild.Extension.Pack.1.2.0\lib\net40\</ExtensionPackPath>
     <LibGit2SharpPath>$(NugetPackageFolder)LibGit2Sharp.0.21.0.176\lib\net40\</LibGit2SharpPath>
     <LibGit2SharpPropsFilePath>$(NugetPackageFolder)LibGit2Sharp.0.21.0.176\build\net40\LibGit2Sharp.props</LibGit2SharpPropsFilePath>
-    <SHFBROOT>$(NugetPackageFolder)EWSoftware.SHFB.2014.11.22.0\Tools\</SHFBROOT>
+    <SHFBROOT>$(NugetPackageFolder)EWSoftware.SHFB.$(EWSoftwareSHFBPackageVersion)\Tools\</SHFBROOT>
+    <SHFBFrameworkROOT>$(NugetPackageFolder)EWSoftware.SHFB.NETFramework.$(EWSoftwareSHFBNetFrameworkPackageVersion)</SHFBFrameworkROOT>
+    <VSWherePath>$(NugetPackageFolder)vswhere.$(VSWherePackageVersion)\tools\</VSWherePath>
     <XunitPath>$(NugetPackageFolder)xunit.1.9.2\lib\net20\</XunitPath>
+    <SignToolTaskPath>$(NugetPackageFolder)Microsoft.DotNet.SignTool.$(SignToolTaskPackageVersion)\</SignToolTaskPath>
+    <MicroBuildCorePath>$(NugetPackageFoldeR)MicroBuild.Core.$(MicroBuildCorePackageVersion)\</MicroBuildCorePath>
   </PropertyGroup>
 
   <!--
@@ -26,12 +38,18 @@
   ================================================================================================
   -->
   <ItemGroup>
+    <RestoreNugetPackage Include="EWSoftware.SHFB.NETFramework">
+      <Version>$(EWSoftwareSHFBNetFrameworkPackageVersion)</Version>
+    </RestoreNugetPackage>
     <RestoreNugetPackage Include="EWSoftware.SHFB">
-      <Version>2014.11.22.0</Version>
+      <Version>$(EWSoftwareSHFBPackageVersion)</Version>
     </RestoreNugetPackage>
-    <RestoreNugetPackage Include="FireGiant.BuildTasks.AzureStorage">
+    <RestoreNugetPackage Include="vswhere">
+      <Version>$(VSWherePackageVersion)</Version>
+    </RestoreNugetPackage>
+<!--    <RestoreNugetPackage Include="FireGiant.BuildTasks.AzureStorage">
       <Version>1.0.0.0</Version>
-    </RestoreNugetPackage>
+    </RestoreNugetPackage> -->
     <RestoreNugetPackage Include="LibGit2Sharp">
       <Version>0.21.0.176</Version>
     </RestoreNugetPackage>
@@ -43,6 +61,12 @@
     </RestoreNugetPackage>
     <RestoreNugetPackage Include="xunit">
       <Version>1.9.2</Version>
+    </RestoreNugetPackage>
+    <RestoreNugetPackage Include="Microsoft.DotNet.SignTool">
+      <Version>$(SignToolTaskPackageVersion)</Version>
+    </RestoreNugetPackage>
+    <RestoreNugetPackage Include="MicroBuild.Core">
+      <Version>$(MicroBuildCorePackageVersion)</Version>
     </RestoreNugetPackage>
   </ItemGroup>
   <Target Name="PackageRestore"

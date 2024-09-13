@@ -210,6 +210,13 @@ HRESULT RegistrationGetResumeCommandLine(
     __deref_out_z LPWSTR* psczResumeCommandLine
     );
 
+HRESULT WriteRunOnceUninstallCommand(
+    __in LPCWSTR wzRelatedBundleId
+    );
+
+HRESULT RemoveRunOnceUninstallCommand(
+    __in LPCWSTR wzRelatedBundleId
+    );
 
 #if defined(__cplusplus)
 }

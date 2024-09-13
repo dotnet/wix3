@@ -23,6 +23,7 @@
   </PropertyGroup>
 
   <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildProjectDirectory), wix.proj))\tools\WixBuild.props" />
+
   <PropertyGroup>
     <NamespaceSummaries>
       <NamespaceSummaryItem name="(global)" isDocumented="False" xmlns="" />
@@ -52,6 +53,10 @@
       <DocumentationSource sourceFile="$(DirTargetWix)\Microsoft.Deployment.WindowsInstaller.Linq.dll" xmlns="" />
       <DocumentationSource sourceFile="$(DirTargetWix)\Microsoft.Deployment.WindowsInstaller.Linq.xml" xmlns="" />
     </DocumentationSources>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <ComponentPath>$(SHFBFrameworkROOT)</ComponentPath>
   </PropertyGroup>
 
   <ItemGroup>

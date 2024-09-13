@@ -290,6 +290,10 @@ extern "C" LPCSTR LoggingActionStateToString(
         return "MajorUpgrade";
     case BOOTSTRAPPER_ACTION_STATE_PATCH:
         return "Patch";
+    case BOOTSTRAPPER_ACTION_STATE_RUN_ONCE_UNINSTALL_WRITE:
+        return "RunOnceUninstallWrite";
+    case BOOTSTRAPPER_ACTION_STATE_RUN_ONCE_UNINSTALL_REMOVE:
+        return "RunOnceUninstallRemove";
     default:
         return "Invalid";
     }
@@ -563,6 +567,8 @@ extern "C" LPCSTR LoggingRequestStateToString(
         return "Present";
     case BOOTSTRAPPER_REQUEST_STATE_REPAIR:
         return "Repair";
+    case BOOTSTRAPPER_REQUEST_STATE_NEXT_SESSION_ABSENT:
+        return "NextSessionAbsent";
     default:
         return "Invalid";
     }

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Copyright (c) .NET Foundation and contributors. All rights reserved. Licensed under the Microsoft Reciprocal License. See LICENSE.TXT file in the project root for full license information. -->
+
+
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildProjectDirectory), wix.proj))\tools\WixBuild.props" />
+
+  <PropertyGroup>
+    <OutputName>Microsoft.Signed.Wix</OutputName>
+    <PackageVersion>$(WixSemanticVersion)</PackageVersion>
+    <ShouldSignOutput>true</ShouldSignOutput>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Stage Include="Microsoft.Signed.Wix.props">
+      <StageSubDirectory>build</StageSubDirectory>
+    </Stage>
+    <Stage Include="README.md" />
+    <Stage Include="MicrosoftDriverInstallFrameworks(DIFx)-Standalone(free)UseTerms.rtf" />
+    <Stage Include="wix-white-bg.png" />
+    <Stage Include="$(WixRoot)LICENSE.txt" />
+    <Stage Include="$(OutputPath)Microsoft.Signed.Wix-$(WixSemanticVersion).zip ">
+      <StageSubDirectory>tools</StageSubDirectory>
+      <Unzip>true</Unzip>
+    </Stage>
+  </ItemGroup>  
+
+  <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildProjectDirectory), wix.proj))\tools\WixBuild.targets" />
+</Project>

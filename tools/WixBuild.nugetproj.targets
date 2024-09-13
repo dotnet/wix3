@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Copyright (c) .NET Foundation and contributors. All rights reserved. Licensed under the Microsoft Reciprocal License. See LICENSE.TXT file in the project root for full license information. -->
+
+
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <UsingTask AssemblyFile="$(ExtensionPackPath)MSBuild.ExtensionPack.dll" TaskName="Zip" />
+
+  <PropertyGroup>
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildProjectFullPath)</MSBuildAllProjects>
+    <PackageName Condition=" '$(PackageName)'=='' ">$(OutputName)</PackageName>
+    <PackageRootPath Condition=" '$(PackageRootPath)'=='' ">$(MSBuildProjectDirectory)</PackageRootPath>
+    <PackageNuspec Condition=" '$(PackageNuspec)'=='' ">$(MSBuildProjectName).nuspec</PackageNuspec>
+
+    <TargetPath>$(OutputPath)$(NugetOutputSubDirectory)$(PackageName).nupkg</TargetPath>
+    <SignOutput Condition="'$(SignOutput)'=='' and '$(ShouldSignOutput)'=='true' and '$(PleaseSignOutput)'!=''">true</SignOutput>
+  </PropertyGroup>
+
+  <!--
+  ================================================================================================
+  Stage
+
+    Stages items then creates a NuGet package.
+
+    [IN]
+    @(Stage) - Items to stage.
+
+    [OUT]
+    @(PackageFile) - The items to package.
+  ================================================================================================
+  -->
+  <Target Name="Stage"
+          DependsOnTargets="_PrepareStageItems"
+          Inputs="@(_Stage)"
+          Outputs="$(TargetPath)"
+          Condition=" '@(Stage)'!='' ">
+    <Message Importance="low" Text="Stage = %(_Stage.Identity) -> %(_Stage.TargetPath)"/>
+
+    <Copy SourceFiles="@(_Stage)" DestinationFiles="%(_Stage.TargetPath)"
+          SkipUnchangedFiles="true" Condition="'%(_Stage.Unzip)'!='true'">
+      <Output TaskParameter="CopiedFiles" ItemName="PackageContent"/>
+      <Output TaskParameter="CopiedFiles" ItemName="FileWrites"/>
+    </Copy>
+
+    <ItemGroup>
+      <Unzip Include="@(_Stage)" Condition="%(_Stage.Unzip)=='true'" />
+    </ItemGroup>
+
+    <Zip TaskAction="Extract"
+         CompressFiles="@(UnZip)"
+         ExtractPath="%(TargetDir)"
+         ZipFileName="@(Unzip)" />
+
+    <PropertyGroup>
+      <PackageRootPath>$(IntermediateOutputPath)</PackageRootPath>
+    </PropertyGroup>
+  </Target>
+
+  <Target Name="_PrepareStageItems"
+          Condition=" '@(Stage)'!='' ">
+    <ItemGroup>
+      <_Stage Include="@(Stage)" Condition=" '%(Stage.StageSubDirectory)'!='' ">
+        <TargetDir>$(IntermediateOutputPath)%(Stage.StageSubDirectory)\</TargetDir>
+        <TargetPath>$(IntermediateOutputPath)%(Stage.StageSubDirectory)\%(Stage.Filename)%(Stage.Extension)</TargetPath>
+      </_Stage>
+      <_Stage Include="@(Stage)" Condition=" '%(Stage.StageSubDirectory)'=='' ">
+        <TargetDir>$(IntermediateOutputPath)\</TargetDir>
+        <TargetPath>$(IntermediateOutputPath)%(Stage.Filename)%(Stage.Extension)</TargetPath>
+      </_Stage>
+    </ItemGroup>
+  </Target>
+
+  <Target Name="Package">
+    <Error Condition="'$(NuGetExe)' == ''" Text="Unable to find nuget.exe. The NuGetExe property is not set." />
+    <Error Condition="!Exists($(NuGetExe))" Text="Unable to find '$(NuGetExe)'." />
+
+    <Exec Command="$(NugetExe) pack $(PackageNuspec) -BasePath $(IntermediateOutputPath) -OutputDir $(OutputPath) -Version $(PackageVersion)" />
+  </Target>
+
+  <Target Name="Build"
+          DependsOnTargets="Stage;Package"
+          Inputs="$(MSBuildAllProjects);$(MSBuildProjectFullPath);@(Stage);@(PackageContent)"
+          Outputs="$(TargetPath)" />
+</Project>

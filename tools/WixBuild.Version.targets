@@ -29,6 +29,9 @@
         <FullBuildVersionString>$(MajorBuildNumber).$(MinorBuildNumber).$(BuildRevision).$(BuildNumber)</FullBuildVersionString>
         <FullBuildVersionStringDashed>$(MajorBuildNumber)-$(MinorBuildNumber)-$(BuildRevision)-$(BuildNumber)</FullBuildVersionStringDashed>
         <MsiProductVersionString>$(MajorBuildNumber).$(MinorBuildNumber).$(BuildNumber)</MsiProductVersionString>
+        <!-- This will generate a semantic version like 3.14.1-9208 or when running in AzDo, a value like 3.14.9208.2837461 -->
+        <WixSemanticVersion>$(MajorBuildNumber).$(MinorBuildNumber).$(BuildRevision)-$(BuildNumber)</WixSemanticVersion>
+        <WixSemanticVersion Condition="'$(BUILD_BUILDID)' != ''">$(WixSemanticVersion).$(BUILD_BUILDID)</WixSemanticVersion>
     </PropertyGroup>
 
   <!--

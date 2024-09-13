@@ -7,6 +7,14 @@ trigger:
 
 pr: none
 
+variables:
+- name: OfficialBuild
+  value: true
+- name: TestSign
+  value: false
+- name: _TeamName
+  value: DotNetCore
+
 resources:
   repositories:
   - repository: 1ESPipelineTemplates
@@ -28,7 +36,17 @@ extends:
       jobs:
       - job: build
         displayName: Build
+        timeoutInMinutes: 180
         steps:
+        - task: MicroBuildSigningPlugin@4
+          displayName: Install MicroBuild plugin
+          inputs:
+            signType: real
+            zipSources: false
+            feedSource: https://dnceng.pkgs.visualstudio.com/_packaging/MicroBuildToolset/nuget/v3/index.json
+          env:
+            TeamName: $(_TeamName)
+            MicroBuildOutputFolderOverride: '$(Agent.TempDirectory)'
         - task: MSBuild@1
           displayName: Register WiX Toolset StrongName Verification Skipping
           inputs:
@@ -39,12 +57,24 @@ extends:
         - script: reg query "HKLM\SOFTWARE\MICROSOFT\WINDOWS KITS\Installed Roots" /s
           displayName: List Windows SDKs
         - task: MSBuild@1
+          displayName: Restore
           inputs:
             solution: 'wix.proj'
-            msbuildArguments: '/p:Configuration=Release'
+            msbuildArguments: '/t:Restore'
+        - task: MSBuild@1
+          displayName: Build WixRelease
+          inputs:
+            solution: '.\tools\release\release.proj'
+            msbuildArguments: '/p:OfficialBuildPrivateKeyPair=$(System.DefaultWorkingDirectory)\dotnetwix.snk;Configuration=Release;NoPush=true;SkipUploadFiles=true;PleaseSignOutput=true;OfficialBuild=$(OfficialBuild);TestSign=$(TestSign) /bl:$(System.DefaultWorkingDirectory)\build\logs\WixRelease.binlog /p:BuildSandcastleDocumentation=false'
         templateContext:
           outputs:
           - output: pipelineArtifact
             displayName: Publish Build Artifacts
             artifact: build
-            path: $(System.DefaultWorkingDirectory)/build
+            path: $(System.DefaultWorkingDirectory)/build/ship
+            condition: always()
+          - output: pipelineArtifact
+            displayName: Publish Build Logs
+            artifact: logs
+            path: $(System.DefaultWorkingDirectory)/build/logs
+            condition: always()

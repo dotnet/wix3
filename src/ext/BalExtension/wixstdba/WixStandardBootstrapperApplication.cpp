@@ -18,6 +18,10 @@ static const DWORD WIXSTDBA_ACQUIRE_PERCENTAGE = 30;
 static const LPCWSTR WIXSTDBA_VARIABLE_BUNDLE_FILE_VERSION = L"WixBundleFileVersion";
 static const LPCWSTR WIXSTDBA_VARIABLE_LANGUAGE_ID = L"WixStdBALanguageId";
 
+// No WiXStdBA prefix. Variables starting with the WiX prefix cannot be set using <Variable /> elements inside the bundle authoring or using
+// searches like util:RegistrySearch.
+static const LPCWSTR WIXSTDBA_VARIABLE_REMOVE_UPGRADE_RELATED_BUNDLE = L"RemoveUpgradeRelatedBundle";
+
 enum WIXSTDBA_STATE
 {
     WIXSTDBA_STATE_OPTIONS,
@@ -345,6 +349,37 @@ public: // IBootstrapperApplication
             m_pBAFunction->OnDetectComplete();
         }
 
+        // Burn executes search operations before DetectComplete triggers. If a search fails, for example, a registry key doesn't exist, the
+        // associated variable becomes unset. The BA variable needs to be set or assigned a default before Burn starts the planning phase or the BA
+        // uses the variable in a conditional evaluation.
+        if (SUCCEEDED(hrStatus))
+        {
+            HRESULT hr = BalGetStringVariable(WIXSTDBA_VARIABLE_REMOVE_UPGRADE_RELATED_BUNDLE, &m_sczRemoveUpgradeRelatedBundle);
+
+            // If the variable doesn't exist or has an invalid value we force it to a proper default.
+            if (!SUCCEEDED(hr) ||
+                (SUCCEEDED(hr) &&
+                 CSTR_EQUAL != ::CompareStringW(LOCALE_INVARIANT, NORM_IGNORECASE, m_sczRemoveUpgradeRelatedBundle, -1, L"always", -1) &&
+                 CSTR_EQUAL != ::CompareStringW(LOCALE_INVARIANT, NORM_IGNORECASE, m_sczRemoveUpgradeRelatedBundle, -1, L"never", -1) &&
+                 CSTR_EQUAL != ::CompareStringW(LOCALE_INVARIANT, NORM_IGNORECASE, m_sczRemoveUpgradeRelatedBundle, -1, L"nextSession", -1)))
+            {
+                hr = m_pEngine->SetVariableString(WIXSTDBA_VARIABLE_REMOVE_UPGRADE_RELATED_BUNDLE, L"always");
+
+                if (FAILED(hr))
+                {
+                    BalLogError(hr, "Failed to set variable: %ls.", WIXSTDBA_VARIABLE_REMOVE_UPGRADE_RELATED_BUNDLE);
+                }
+
+                ReleaseStr(m_sczRemoveUpgradeRelatedBundle);
+                hr = StrAllocString(&m_sczRemoveUpgradeRelatedBundle, L"always", 0);
+
+                if (FAILED(hr))
+                {
+                    BalLogError(hr, "Failed to allocate string.");
+                }
+            }
+        }
+
         if (SUCCEEDED(hrStatus))
         {
             hrStatus = EvaluateConditions();
@@ -398,7 +433,7 @@ public: // IBootstrapperApplication
 
 
     virtual STDMETHODIMP_(int) OnPlanRelatedBundle(
-        __in_z LPCWSTR /*wzBundleId*/,
+        __in_z LPCWSTR wzBundleId,
         __inout_z BOOTSTRAPPER_REQUEST_STATE* pRequestedState
         )
     {
@@ -406,6 +441,34 @@ public: // IBootstrapperApplication
         if (m_fPrereq)
         {
             *pRequestedState = BOOTSTRAPPER_REQUEST_STATE_NONE;
+        }
+        else
+        {
+            if (wzBundleId && *wzBundleId)
+            {
+                BAL_INFO_PACKAGE* pPackage = NULL;
+                HRESULT hr = BalInfoFindPackageById(&m_Bundle.packages, wzBundleId, &pPackage);
+
+                if (SUCCEEDED(hr) &&
+                    BAL_INFO_PACKAGE_TYPE_BUNDLE_UPGRADE == pPackage->type &&
+                    BOOTSTRAPPER_REQUEST_STATE_ABSENT == *pRequestedState)
+                {
+                    if (CSTR_EQUAL == ::CompareStringW(LOCALE_INVARIANT, NORM_IGNORECASE, m_sczRemoveUpgradeRelatedBundle, -1, L"nextSession", -1))
+                    {
+                        BalLog(BOOTSTRAPPER_LOG_LEVEL_STANDARD, "Deferring removal of upgrade related bundle until the next session.");
+                        *pRequestedState = BOOTSTRAPPER_REQUEST_STATE_NEXT_SESSION_ABSENT;
+                    }
+                    else if (CSTR_EQUAL == ::CompareStringW(LOCALE_INVARIANT, NORM_IGNORECASE, m_sczRemoveUpgradeRelatedBundle, -1, L"never", -1))
+                    {
+                        BalLog(BOOTSTRAPPER_LOG_LEVEL_STANDARD, "Skipping removal of upgrade related bundle.");
+                        *pRequestedState = BOOTSTRAPPER_REQUEST_STATE_NONE;
+                    }
+                }
+                else
+                {
+                    BalLogError(hr, "Failed to find related bundle package: %ls", wzBundleId);
+                }
+            }
         }
 
         return CheckCanceled() ? IDCANCEL : IDOK;
@@ -3625,6 +3688,8 @@ public:
         m_pBAFunction = NULL;
 
         m_fUseUILanguages = FALSE;
+
+        m_sczRemoveUpgradeRelatedBundle = NULL;
     }
 
 
@@ -3651,6 +3716,7 @@ public:
         ReleaseStr(m_sczLicenseFile);
         ReleaseStr(m_sczLicenseUrl);
         ReleaseStr(m_sczPrereqPackage);
+        ReleaseStr(m_sczRemoveUpgradeRelatedBundle);
         ReleaseStr(m_sczAfterForcedRestartPackage);
         ReleaseNullObject(m_pEngine);
 
@@ -3697,6 +3763,7 @@ private:
 
     LPWSTR m_sczLicenseFile;
     LPWSTR m_sczLicenseUrl;
+    LPWSTR m_sczRemoveUpgradeRelatedBundle;
     BOOL m_fSuppressOptionsUI;
     BOOL m_fSuppressDowngradeFailure;
     BOOL m_fSuppressRepair;

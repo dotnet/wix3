@@ -1604,3 +1604,66 @@ LExit:
 
     return hr;
 }
+
+extern "C" HRESULT WriteRunOnceUninstallCommand(
+    __in LPCWSTR wzRelatedBundleId
+    )
+{
+    HRESULT hr = S_OK;
+    HKEY hkRegistration = NULL;
+    HKEY hkRunOnce = NULL;
+    LPWSTR sczQuietUninstallString = NULL;
+    LPWSTR sczRunOnceUninstallValueName = NULL;
+    LPWSTR sczRegistrationKey = NULL;
+
+    hr = StrAllocFormatted(&sczRegistrationKey, L"%s\\%s", BURN_REGISTRATION_REGISTRY_UNINSTALL_KEY, wzRelatedBundleId);
+    ExitOnFailure(hr, "Failed to build uninstall registry key path.");
+
+    hr = RegOpen(HKEY_LOCAL_MACHINE, sczRegistrationKey, KEY_READ, &hkRegistration);
+    ExitOnFailure(hr, "Failed to open registration key.");
+
+    // Retrieve the QuietUninstallString value from the registration key
+    hr = RegReadString(hkRegistration, REGISTRY_BUNDLE_QUIET_UNINSTALL_STRING, &sczQuietUninstallString);
+    ExitOnFailure(hr, "Failed to read %ls value.", REGISTRY_BUNDLE_QUIET_UNINSTALL_STRING);
+
+    // Write the RunOnce value.
+    hr = RegCreate(HKEY_LOCAL_MACHINE, REGISTRY_RUN_ONCE_KEY, KEY_WRITE, &hkRunOnce);
+    ExitOnFailure(hr, "Failed to create RunOnce key.");
+
+    hr = StrAllocFormatted(&sczRunOnceUninstallValueName, L"%ls (%ls)", wzRelatedBundleId, L"Next Session");
+    ExitOnFailure(hr, "Failed to format uninstall command line for RunOnce.");
+
+    hr = RegWriteString(hkRunOnce, sczRunOnceUninstallValueName, sczQuietUninstallString);
+    ExitOnFailure(hr, "Failed to write RunOnce key value.");
+
+LExit:
+    ReleaseStr(sczQuietUninstallString);
+    ReleaseStr(sczRunOnceUninstallValueName);
+    ReleaseRegKey(hkRegistration);
+    ReleaseRegKey(hkRunOnce);
+
+    return hr;
+}
+
+extern "C" HRESULT RemoveRunOnceUninstallCommand(
+    __in LPCWSTR wzRelatedBundleId
+    )
+{
+    HRESULT hr = S_OK;
+    HKEY hkRunOnce = NULL;
+    LPWSTR sczRunOnceUninstallValueName = NULL;
+
+    hr = StrAllocFormatted(&sczRunOnceUninstallValueName, L"%ls (%ls)", wzRelatedBundleId, L"Next Session");
+    ExitOnFailure(hr, "Failed to format uninstall command line for RunOnce.");
+
+    hr = RegCreate(HKEY_LOCAL_MACHINE, REGISTRY_RUN_ONCE_KEY, KEY_SET_VALUE, &hkRunOnce);
+    ExitOnFailure(hr, "Failed to create RunOnce key.");
+
+    hr = RegDeleteValue(hkRunOnce, sczRunOnceUninstallValueName);
+    ExitOnFailure(hr, "Failed to delete RunOnce value.");
+
+LExit:
+    ReleaseStr(sczRunOnceUninstallValueName);
+    ReleaseRegKey(hkRunOnce);
+    return hr;
+}

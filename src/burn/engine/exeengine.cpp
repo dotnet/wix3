@@ -192,6 +192,9 @@ extern "C" HRESULT ExeEnginePlanCalculatePackage(
         case BOOTSTRAPPER_REQUEST_STATE_FORCE_ABSENT:
             execute = BOOTSTRAPPER_ACTION_STATE_UNINSTALL;
             break;
+        case BOOTSTRAPPER_REQUEST_STATE_NEXT_SESSION_ABSENT:
+            execute = BOOTSTRAPPER_ACTION_STATE_RUN_ONCE_UNINSTALL_WRITE;
+            break;
         default:
             execute = BOOTSTRAPPER_ACTION_STATE_NONE;
             break;
@@ -235,6 +238,9 @@ extern "C" HRESULT ExeEnginePlanCalculatePackage(
             case BOOTSTRAPPER_REQUEST_STATE_FORCE_ABSENT: __fallthrough;
             case BOOTSTRAPPER_REQUEST_STATE_ABSENT:
                 rollback = BOOTSTRAPPER_ACTION_STATE_INSTALL;
+                break;
+            case BOOTSTRAPPER_REQUEST_STATE_NEXT_SESSION_ABSENT:
+                rollback = BOOTSTRAPPER_ACTION_STATE_RUN_ONCE_UNINSTALL_REMOVE;
                 break;
             default:
                 rollback = BOOTSTRAPPER_ACTION_STATE_NONE;
@@ -412,6 +418,9 @@ extern "C" HRESULT ExeEngineExecutePackage(
         wzArguments = pExecuteAction->exePackage.pPackage->Exe.sczInstallArguments;
         break;
 
+    // Deferred actions do not require arguments
+    case BOOTSTRAPPER_ACTION_STATE_RUN_ONCE_UNINSTALL_WRITE: __fallthrough;
+    case BOOTSTRAPPER_ACTION_STATE_RUN_ONCE_UNINSTALL_REMOVE: __fallthrough;
     case BOOTSTRAPPER_ACTION_STATE_UNINSTALL:
         wzArguments = pExecuteAction->exePackage.pPackage->Exe.sczUninstallArguments;
         break;
@@ -448,7 +457,7 @@ extern "C" HRESULT ExeEngineExecutePackage(
                 hr = StrAllocConcat(&sczArguments, commandLineArgument->sczInstallArgument, 0);
                 ExitOnFailure(hr, "Failed to get command-line argument for install.");
                 break;
-
+            
             case BOOTSTRAPPER_ACTION_STATE_UNINSTALL:
                 hr = StrAllocConcat(&sczArguments, commandLineArgument->sczUninstallArgument, 0);
                 ExitOnFailure(hr, "Failed to get command-line argument for uninstall.");
@@ -458,6 +467,10 @@ extern "C" HRESULT ExeEngineExecutePackage(
                 hr = StrAllocConcat(&sczArguments, commandLineArgument->sczRepairArgument, 0);
                 ExitOnFailure(hr, "Failed to get command-line argument for repair.");
                 break;
+
+            // No command-line arguments for these actions since they do not actually run an executable.
+            case BOOTSTRAPPER_ACTION_STATE_RUN_ONCE_UNINSTALL_WRITE: __fallthrough;
+            case BOOTSTRAPPER_ACTION_STATE_RUN_ONCE_UNINSTALL_REMOVE: __fallthrough;
 
             default:
                 hr = E_INVALIDARG;
@@ -523,8 +536,21 @@ extern "C" HRESULT ExeEngineExecutePackage(
 
     if (!pExecuteAction->exePackage.fFireAndForget && BURN_EXE_PROTOCOL_TYPE_BURN == pExecuteAction->exePackage.pPackage->Exe.protocol)
     {
-        hr = EmbeddedRunBundle(sczExecutablePath, sczCommand, pfnGenericMessageHandler, pvContext, &dwExitCode);
-        ExitOnFailure(hr, "Failed to run bundle as embedded from path: %ls", sczExecutablePath);
+        if (BOOTSTRAPPER_ACTION_STATE_RUN_ONCE_UNINSTALL_WRITE == pExecuteAction->exePackage.action)
+        {
+            WriteRunOnceUninstallCommand(pExecuteAction->exePackage.pPackage->sczId);
+            LogLine(REPORT_STANDARD, "Writing RunOnce key, package id: %ls", pExecuteAction->exePackage.pPackage->sczId);
+        }
+        else if (BOOTSTRAPPER_ACTION_STATE_RUN_ONCE_UNINSTALL_REMOVE == pExecuteAction->exePackage.action)
+        {
+            RemoveRunOnceUninstallCommand(pExecuteAction->exePackage.pPackage->sczId);
+            LogLine(REPORT_STANDARD, "Removing RunOnce key, package id: %ls", pExecuteAction->exePackage.pPackage->sczId);
+        }
+        else
+        {
+            hr = EmbeddedRunBundle(sczExecutablePath, sczCommand, pfnGenericMessageHandler, pvContext, &dwExitCode);
+            ExitOnFailure(hr, "Failed to run bundle as embedded from path: %ls", sczExecutablePath);
+        }
     }
     else if (!pExecuteAction->exePackage.fFireAndForget && BURN_EXE_PROTOCOL_TYPE_NETFX4 == pExecuteAction->exePackage.pPackage->Exe.protocol)
     {

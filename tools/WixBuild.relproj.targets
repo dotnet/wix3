@@ -75,6 +75,26 @@
   </Target>
 
   <Target Name="PrepareReleaseFiles">
+    <!-- Do the final signing. The inner content, e.g. DLLs inside wixlib inside extensions have already been signed, but
+         we need to sign all the remaining EXEs and DLLs and make sure the copies we have in the zip and nupkg are binary equal. -->
+    <ItemGroup>
+      <ReleaseFileToSign Include="@(ReleaseFile)" Condition="'%(ReleaseFile.Sign)'=='true'" />
+
+      <!-- Engine should be signed as part of building an installer bundle -->
+      <ExcludeFileSignInfo Include="burn.exe" CertificateName="None" />
+    </ItemGroup>
+
+    <Microsoft.DotNet.SignTool.SignToolTask DoStrongNameCheck="false"
+                                            DryRun="$(DryRun)"
+                                            FileExtensionSignInfo="@(FileExtensionSignInfo)"
+                                            FileSignInfo="@(ExcludeFileSignInfo)"
+                                            ItemsToSign="@(ReleaseFileToSign)"
+                                            LogDir="$(SignLogDir)"
+                                            MicroBuildCorePath="$(MicroBuildCorePath)"
+                                            MSBuildPath="$(_DesktopMSBuildPath)"
+                                            TempDir="$(SignTempDir)"
+                                            TestSign="$(TestSign)" />
+
     <ItemGroup>
       <CopyReleaseFiles Include="@(ReleaseFile)">
         <CopyTo>$(ReleaseFolder)%(ReleaseFile.RelativeFolder)%(ReleaseFile.Filename)%(ReleaseFile.Extension)</CopyTo>

@@ -59,8 +59,8 @@
   -->
   <Target Name="CheckRequiredProperties" DependsOnTargets="Diagnostics">
     <PropertyGroup>
-      <DisabledWixStrongName32>$([MSBuild]::GetRegistryValueFromView('HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\StrongName\Verification\*,ce35f76fcda82bad', '', 'ABSENT', RegistryView.Registry32))</DisabledWixStrongName32>
-      <DisabledWixStrongName64>$([MSBuild]::GetRegistryValueFromView('HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\StrongName\Verification\*,ce35f76fcda82bad', '', 'ABSENT', RegistryView.Registry64))</DisabledWixStrongName64>
+      <DisabledWixStrongName32>$([MSBuild]::GetRegistryValueFromView('HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\StrongName\Verification\*,b1008bfdf32304aa', '', 'ABSENT', RegistryView.Registry32))</DisabledWixStrongName32>
+      <DisabledWixStrongName64>$([MSBuild]::GetRegistryValueFromView('HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\StrongName\Verification\*,b1008bfdf32304aa', '', 'ABSENT', RegistryView.Registry64))</DisabledWixStrongName64>
     </PropertyGroup>
 
     <Error
@@ -68,10 +68,10 @@
       Condition=" '$(OFFICIAL_WIX_BUILD)'=='' and ($(DisabledWixStrongName32) == 'ABSENT' or $(DisabledWixStrongName64) == 'ABSENT') "
       Text="Strong name validation for the WiX toolset must be disabled on a developer machine to build. Execute 'msbuild $(MSBuildThisFileDirectory)OneTimeWixBuildInitialization.proj' from an elevated command prompt." />
 
-    <Error
+<!--    <Error
       Code="WIXBUILD000"
       Condition=" '$(OFFICIAL_WIX_BUILD)'!='' and !($(VS2010Available) and $(VS2012Available) and $(VS2013Available) and $(VS2015Available) and $(VS2017Available))"
-      Text="All versions of VS are required on an official build. Install VS2010, VS2012, VS2013, VS2015, and VS2017." />
+      Text="All versions of VS are required on an official build. Install VS2010, VS2012, VS2013, VS2015, and VS2017." /> -->
 
     <Error
       Code="WIXBUILD001"
@@ -123,15 +123,15 @@
       Condition=" $(BuildArm) and !(Exists('$(PlatformSdkArmLibraryRoot)')) "
       Text="No suitable Windows SDK found to build ARM" />
 
-    <Error
+<!--    <Error
       Code="WIXBUILD014"
       Condition=" '$(PleaseSignOutput)'!='' and !Exists('$(SigningToolExe)') "
-      Text="Cannot locate SigningTool. Ensure SigningTool is present at &quot;$(SigningToolExe)&quot;." />
+      Text="Cannot locate SigningTool. Ensure SigningTool is present at &quot;$(SigningToolExe)&quot;." /> -->
 
-    <Error
+<!--    <Error
       Code="WIXBUILD015"
       Condition=" '$(PleaseSignOutput)'!='' and ('$(SigningKeyVaultUri)'=='' or '$(SigningCertName)'=='') "
-      Text="Signing is requested but one or both required properites SigningKeyVaultUri and SigningCertName were not specified on the command line or as environment variables." />
+      Text="Signing is requested but one or both required properites SigningKeyVaultUri and SigningCertName were not specified on the command line or as environment variables." /> -->
 
     <Error
       Code="WIXBUILD016"

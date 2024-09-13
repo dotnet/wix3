@@ -23,6 +23,10 @@
     <ProjectReference Include="..\src\setup\zip\debug.zipproj">
       <Properties>Configuration=$(Configuration)</Properties>
     </ProjectReference>
+    <ProjectReference Include="..\src\setup\NuGet\Microsoft.Signed.Wix.nugetproj">
+      <Properties>Configuration=$(Configuration)</Properties>
+    </ProjectReference>
+
   </ItemGroup>
 
   <!--
@@ -48,14 +52,21 @@
         <RelativeFolder>data\</RelativeFolder>
       </ReleaseFile>
 
-      <ReleaseFile Include="$(OutputPath)wix$(MajorMinorVersionString)-binaries.zip">
+      <ReleaseFile Include="$(OutputPath)Microsoft.Signed.Wix-$(WixSemanticVersion).zip">
         <Title>WiX v$(MajorMinorVersionDottedString) binaries for situations where install cannot be used.</Title>
+        <Protected>true</Protected>
+        <Sign>true</Sign>
+      </ReleaseFile>
+
+      <ReleaseFile Include="$(OutputPath)Microsoft.Signed.Wix.debug-$(WixSemanticVersion).zip">
+        <Title>WiX v$(MajorMinorVersionDottedString) source and symbols for debugging purposes.</Title>
         <Protected>true</Protected>
       </ReleaseFile>
 
-      <ReleaseFile Include="$(OutputPath)wix$(MajorMinorVersionString)-debug.zip">
-        <Title>WiX v$(MajorMinorVersionDottedString) source and symbols for debugging purposes.</Title>
+      <ReleaseFile Include="$(OutputPath)Microsoft.Signed.Wix.$(WixSemanticVersion).nupkg">
+        <Title>WiX v$(MajorMinorVersionDottedString) binaries shipped as a NuGet package.</Title>
         <Protected>true</Protected>
+        <Sign>true</Sign>
       </ReleaseFile>
     </ItemGroup>
   </Target>

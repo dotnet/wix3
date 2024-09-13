@@ -10,16 +10,59 @@
     <SigningConfiguration>--description "WiX Toolset" --description-url "https://wixtoolset.org/" --timestamp-url "http://timestamp.digicert.com" --file-list "$(SigningFilelist)" --azure-key-vault-url $(SigningKeyVaultUri) --azure-key-vault-tenant-id $(SigningTenantId) --azure-key-vault-client-id $(SigningClientId) --azure-key-vault-client-secret $(SigningClientSecret) --azure-key-vault-certificate $(SigningCertName)</SigningConfiguration>
   </PropertyGroup>
 
+  <!-- ==================================== -->
+  <!-- =========== .NET SIGNING =========== -->
+  <!-- ==================================== -->
+
+  <Import Project="$(SignToolTaskPath)build\Microsoft.DotNet.SignTool.props" />
+
+  <!-- Clear out any defaults from .NET tools -->
+  <ItemGroup>
+    <FileExtensionSignInfo Remove=".dll" />
+    <FileExtensionSignInfo Remove=".exe" />
+    <FileExtensionSignInfo Remove=".cab" />
+    <FileExtensionSignInfo Remove=".nupkg" />
+    <FileExtensionSignInfo Include=".dll;.exe;.cab;.msi" CertificateName="3PartySHA2" />
+    <FileExtensionSignInfo Include=".nupkg" CertificateName="NuGet" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TestSign Condition="'$(TestSign)'==''">true</TestSign>
+    <SignLogDir>$(WIX_ROOT)build\logs</SignLogDir>
+    <SignTempDir>$(WIX_ROOT)build\tmp</SignTempDir>
+    <DryRun Condition="'$(OfficialBuild)' != 'true'">true</DryRun>
+    <DryRun Condition="'$(OfficialBuild)' == 'true'">false</DryRun>
+  </PropertyGroup>
+
+  <!-- ==================================== -->
+  <!-- =========== .NET SIGNING =========== -->
+  <!-- ==================================== -->
+
   <ItemGroup>
     <!-- By default, $(TargetPath) will be signed. You can add files to @(FilesToSign) to sign them as well. -->
     <FilesToSign Include="$(TargetPath)" />
   </ItemGroup>
 
-  <Target Name="SignFiles" AfterTargets="AfterBuild" Condition="'$(SignOutput)'=='true'">
+  <Target Name="SignFiles" AfterTargets="AfterBuild" DependsOnTargets="_FindMSBuild" Condition="'$(SignOutput)'=='true'">
     <Message Importance="high" Text="Signing file: %(FilesToSign.FullPath)" />
 
-    <Exec Command='"$(SigningToolExe)" $(SigningCommand) $(SigningConfiguration) "%(FilesToSign.FullPath)"'
-          WorkingDirectory="$(MSBuildProjectDirectory)" EchoOff="true" />
+    <ItemGroup>
+      <_FileSignInfo Remove="@(_FileSignInfo)" />
+      <FileSignInfo Remove="@(FileSignInfo)" />
+      <_FileSignInfo Include="@(FilesToSign->'%(Filename)%(Extension)')" CertificateName="3PartySHA2" />
+      <FileSignInfo Include="@(_FileSignInfo->Distinct())" />
+    </ItemGroup>
+
+    <Microsoft.DotNet.SignTool.SignToolTask DoStrongNameCheck="false"
+                                            DryRun="$(DryRun)"
+                                            FileExtensionSignInfo="@(FileExtensionSignInfo)"
+                                            FileSignInfo="@(FileSignInfo)"
+                                            ItemsToSign="@(FilesToSign)"
+                                            LogDir="$(SignLogDir)"
+                                            MicroBuildCorePath="$(MicroBuildCorePath)"
+                                            MSBuildPath="$(_DesktopMSBuildPath)"
+                                            TempDir="$(SignTempDir)"
+                                            TestSign="$(TestSign)" />
   </Target>
 
   <!--
@@ -36,18 +79,60 @@
 
   <Target Name="SignContainers" />
 
-  <Target Name="SignBundleEngine">
-    <Message Importance="high" Text="Signing bundle engine: @(SignBundleEngine->&apos;%(Identity)&apos;)" />
+  <Target Name="_FindMSBuild">
+    <!-- Use VSWHERE to compute the path of desktop MSBUILD so we can run signing. -->
+    <Exec Command="&quot;$(VSWherePath)vswhere.exe&quot; -latest -prerelease -property installationPath -requires Microsoft.Component.MSBuild" ConsoleToMsBuild="true" StandardErrorImportance="high">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_VSInstallDir" />
+    </Exec>
 
-    <Exec Command='"$(SigningToolExe)" $(SigningCommand) $(SigningConfiguration) "@(SignBundleEngine->&apos;%(Identity)&apos;)"'
-          WorkingDirectory="$(MSBuildProjectDirectory)" EchoOff="true" />
+    <PropertyGroup>
+      <_DesktopMSBuildPath>$(_VSInstallDir)\MSBuild\Current\Bin\msbuild.exe</_DesktopMSBuildPath>
+      <_DesktopMSBuildPath Condition="!Exists('$(_DesktopMSBuildPath)')">$(_VSInstallDir)\MSBuild\15.0\Bin\msbuild.exe</_DesktopMSBuildPath>
+    </PropertyGroup>
   </Target>
 
-  <Target Name="SignBundle">
+  <Target Name="SignBundleEngine" DependsOnTargets="_FindMSBuild">
+    <Message Importance="high" Text="Signing bundle engine: @(SignBundleEngine->&apos;%(Identity)&apos;)" />
+
+    <ItemGroup>
+      <_FileSignInfo Remove="@(_FileSignInfo)" />
+      <FileSignInfo Remove="@(FileSignInfo)" />
+      <_FileSignInfo Include="@(SignBundleEngine->'%(Filename)%(Extension)')" CertificateName="3PartySHA2" />
+      <FileSignInfo Include="@(_FileSignInfo->Distinct())" />
+    </ItemGroup>
+
+    <Microsoft.DotNet.SignTool.SignToolTask DoStrongNameCheck="false"
+                                            DryRun="$(DryRun)"
+                                            FileExtensionSignInfo="@(FileExtensionSignInfo)"
+                                            FileSignInfo="@(FileSignInfo)"
+                                            ItemsToSign="@(FilesToSign)"
+                                            LogDir="$(SignLogDir)"
+                                            MicroBuildCorePath="$(MicroBuildCorePath)"
+                                            MSBuildPath="$(_DesktopMSBuildPath)"
+                                            TempDir="$(SignTempDir)"
+                                            TestSign="$(TestSign)" />
+  </Target>
+
+  <Target Name="SignBundle" DependsOnTargets="_FindMSBuild">
     <Message Importance="high" Text="Signing bundle: @(SignBundle->&apos;%(Identity)&apos;)" />
 
-    <Exec Command='"$(SigningToolExe)" $(SigningCommand) $(SigningConfiguration) "@(SignBundle->&apos;%(Identity)&apos;)"'
-          WorkingDirectory="$(MSBuildProjectDirectory)" EchoOff="true" />
+    <ItemGroup>
+      <_FileSignInfo Remove="@(_FileSignInfo)" />
+      <FileSignInfo Remove="@(FileSignInfo)" />
+      <_FileSignInfo Include="@(SignBundle->'%(Filename)%(Extension)')" CertificateName="3PartySHA2" />
+      <FileSignInfo Include="@(_FileSignInfo->Distinct())" />
+    </ItemGroup>
+
+    <Microsoft.DotNet.SignTool.SignToolTask DoStrongNameCheck="false"
+                                            DryRun="$(DryRun)"
+                                            FileExtensionSignInfo="@(FileExtensionSignInfo)"
+                                            FileSignInfo="@(FileSignInfo)"
+                                            ItemsToSign="@(FilesToSign)"
+                                            LogDir="$(SignLogDir)"
+                                            MicroBuildCorePath="$(MicroBuildCorePath)"
+                                            MSBuildPath="$(_DesktopMSBuildPath)"
+                                            TempDir="$(SignTempDir)"
+                                            TestSign="$(TestSign)" />
   </Target>
 
   <!-- Sentinel value that indicates WixBuid.Signing.targets has been initialized. -->

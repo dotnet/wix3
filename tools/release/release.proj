@@ -10,8 +10,8 @@
 
   <Target Name="DoRelease">
     <Error Text="Cannot locate project's private/public keypair at: $(OfficialBuildPrivateKeyPair). Ensure that the OfficialBuildPrivateKeyPair arguments are correct." Condition=" !Exists('$(OfficialBuildPrivateKeyPair)') " />
-    <Error Text="Azure StorageAccount is not specified. Ensure that the StorageAccount argument is correct." Condition=" '$(StorageAccount)'=='' " />
-    <Error Text="Azure StorageAuthentication is not specified. Ensure that the StorageAuthentication argument is correct." Condition=" '$(StorageAuthentication)'=='' " />
+<!--    <Error Text="Azure StorageAccount is not specified. Ensure that the StorageAccount argument is correct." Condition=" '$(StorageAccount)'=='' " />
+    <Error Text="Azure StorageAuthentication is not specified. Ensure that the StorageAuthentication argument is correct." Condition=" '$(StorageAuthentication)'=='' " /> -->
 
     <MSBuild Projects="WixBuildRelease.proj"
              Properties="OfficialBuildPrivateKeyPair=$(OfficialBuildPrivateKeyPair);StorageAccount=$(StorageAccount);StorageAuthentication=$(StorageAuthentication);GithubUser=$(GithubUser);GithubPassword=$(GithubPassword);BuildARM=true;BuildARM64=true"
