@@ -370,7 +370,6 @@ public: // IBootstrapperApplication
                     BalLogError(hr, "Failed to set variable: %ls.", WIXSTDBA_VARIABLE_REMOVE_UPGRADE_RELATED_BUNDLE);
                 }
 
-                ReleaseStr(m_sczRemoveUpgradeRelatedBundle);
                 hr = StrAllocString(&m_sczRemoveUpgradeRelatedBundle, L"always", 0);
 
                 if (FAILED(hr))
